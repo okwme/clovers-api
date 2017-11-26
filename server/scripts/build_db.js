@@ -93,6 +93,7 @@ function createTables (i = 0) {
 
 var {
   abi,
+  bigNumberify,
   address,
   genesisBlock,
   provider,
@@ -126,7 +127,25 @@ function populateLog (key = 0) {
         fromBlock: genesisBlock,
         toBlock: 'latest'
       }).then((logs, error) => {
-        logs.map((l) => l.name = logType.name)
+        let event = abi.find((a) => a.name === logType.name)
+        let names = event.inputs.map((o) => o.name)
+        let types = event.inputs.map((o) => o.type)
+
+        logs.map((l) => {
+          let decoded = iface.decodeParams(names, types, l.data)
+          l.data = decoded
+          if (logType.name === 'Registered') {
+            // console.log(l.data)
+            // console.log(l.data.lastPaidAmount)
+            // console.log(l.data.lastPaidAmount.toString())
+            l.data.lastPaidAmount = l.data.lastPaidAmount.toString()
+            l.data.created = l.data.modified.toString()
+            l.data.modified = l.data.modified.toString()
+            l.data.findersFee = l.data.findersFee.toString()
+          }
+          l.name = logType.name
+          return l
+        })
         console.log(logType.name + ': ' + logs.length + ' logs')
         return r.db('clovers').table('logs').insert(logs).run(connection, (err, results) => {
           if (err) throw new Error(err)
@@ -144,19 +163,14 @@ function nameClovers () {
       if (err) throw new Error(err)
       cursor.toArray((err, result) => {
         if (err) throw new Error(err)
-        let event = abi.find((a) => a.name === 'newCloverName')
-        let names = event.inputs.map((o) => o.name)
-        let types = event.inputs.map((o) => o.type)
         result.forEach((log) => {
-          let decoded = iface.decodeParams(names, types, log.data)
-
-          let cloverKey = clovernames.findIndex((clover) => clover.board === decoded.board)
+          let cloverKey = clovernames.findIndex((clover) => clover.board === log.data.board)
           if (cloverKey > -1) {
             let clover = clovernames[cloverKey]
-            clover.name = xss(decoded.name)
+            clover.name = xss(log.data.name)
             clovernames.splice(cloverKey, 1, clover)
           } else {
-            clovernames.push({board: decoded.board, name: xss(decoded.name)})
+            clovernames.push({board: log.data.board, name: xss(log.data.name)})
           }
         })
         console.log(clovernames.length + ' clovernames')
@@ -174,19 +188,14 @@ function nameUsers () {
       if (err) throw new Error(err)
       cursor.toArray((err, result) => {
         if (err) throw new Error(err)
-        let event = abi.find((a) => a.name === 'newUserName')
-        let names = event.inputs.map((o) => o.name)
-        let types = event.inputs.map((o) => o.type)
         result.forEach((log) => {
-          let decoded = iface.decodeParams(names, types, log.data)
-
-          let userKey = usernames.findIndex((user) => user.address === decoded.player)
+          let userKey = usernames.findIndex((user) => user.address === log.data.player)
           if (userKey > -1) {
             let username = usernames[userKey]
-            username.name = xss(decoded.name)
+            username.name = xss(log.data.name)
             usernames.splice(userKey, 1, username)
           } else {
-            usernames.push({address: decoded.player, name: xss(decoded.name)})
+            usernames.push({address: log.data.player, name: xss(log.data.name)})
           }
         })
         console.log(usernames.length + ' usernames')
@@ -205,51 +214,47 @@ function populateClovers () {
         if (err) throw new Error(err);
         let clovers = []
         let users = []
-        let event = abi.find((a) => a.name === 'Registered')
-        let names = event.inputs.map((o) => o.name)
-        let types = event.inputs.map((o) => o.type)
         result.forEach((log) => {
-          let decoded = iface.decodeParams(names, types, log.data)
-          let clovername = clovernames.find((cn) => cn.board === decoded.board) || {name: decoded.board}
-          if (decoded.newBoard) {
+          let clovername = clovernames.find((cn) => cn.board === log.data.board) || {name: log.data.board}
+          if (log.data.newBoard) {
             clovers.push({
               name: clovername.name,
-              board: decoded.board,
-              first32Moves: decoded.first32Moves,
-              lastMoves: decoded.lastMoves,
-              lastPaidAmount: decoded.lastPaidAmount.toString(),
-              previousOwners: [decoded.newOwner],
-              created: decoded.modified.toString(),
-              modified: decoded.modified.toString(),
-              findersFee: decoded.findersFee.toString()
+              board: log.data.board,
+              first32Moves: log.data.first32Moves,
+              lastMoves: log.data.lastMoves,
+              lastPaidAmount: log.data.lastPaidAmount,
+              previousOwners: [log.data.newOwner],
+              created: log.data.modified,
+              modified: log.data.modified,
+              findersFee: log.data.findersFee
             })
           } else {
-            let cloverKey = clovers.findIndex((c) => c.board === decoded.board)
+            let cloverKey = clovers.findIndex((c) => c.board === log.data.board)
             if (cloverKey > -1) {
               let clover = clovers[cloverKey]
-              clover.modified = decoded.modified.toString()
-              clover.lastPaidAmount = decoded.lastPaidAmount.toString()
-              clover.previousOwners.push(decoded.newOwner)
+              clover.modified = log.data.modified
+              clover.lastPaidAmount = log.data.lastPaidAmount
+              clover.previousOwners.push(log.data.newOwner)
               clovers.splice(cloverKey, 1, clover)
             } else {
-              console.log(decoded.board)
+              console.log(log.data.board)
               console.log(clovers.map((cl) => cl.board))
               console.error('Registered Event for board not yet in array', e)
               reject('Registered Event for board not yet in array')
             }
           }
 
-          let userKey = users.findIndex((u) => u.address === decoded.newOwner)
+          let userKey = users.findIndex((u) => u.address === log.data.newOwner)
           if (userKey > -1) {
             let user = users[userKey]
-            user.clovers.push(decoded.board)
+            user.clovers.push(log.data.board)
             users.splice(userKey, 1, user)
           } else {
-            let username = usernames.find((un) => un.address === decoded.newOwner) || {name: decoded.newOwner}
+            let username = usernames.find((un) => un.address === log.data.newOwner) || {name: log.data.newOwner}
             users.push({
               name: username.name,
-              address: decoded.newOwner,
-              clovers: [decoded.board]
+              address: log.data.newOwner,
+              clovers: [log.data.board]
             })
           }
 
