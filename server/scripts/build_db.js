@@ -1,5 +1,18 @@
+var Promise = require('bluebird');
 r = require('rethinkdb');
 xss = require('xss');
+
+var {
+  abi,
+  bigNumberify,
+  address,
+  genesisBlock,
+  provider,
+  iface,
+  logTypes
+} = require('../../scraper/util/ethers.js');
+
+var {processLog} = require('../../scraper/util/processLogs.js')
 
 var connection = null;
 let usernames = []
@@ -90,17 +103,6 @@ function createTables (i = 0) {
   })
 }
 
-
-var {
-  abi,
-  bigNumberify,
-  address,
-  genesisBlock,
-  provider,
-  iface,
-  logTypes
-} = require('../../scraper/util/ethers.js');
-
 let currBlock = null
 
 function populateLogs () {
@@ -135,9 +137,6 @@ function populateLog (key = 0) {
           let decoded = iface.decodeParams(names, types, l.data)
           l.data = decoded
           if (logType.name === 'Registered') {
-            // console.log(l.data)
-            // console.log(l.data.lastPaidAmount)
-            // console.log(l.data.lastPaidAmount.toString())
             l.data.lastPaidAmount = l.data.lastPaidAmount.toString()
             l.data.created = l.data.modified.toString()
             l.data.modified = l.data.modified.toString()

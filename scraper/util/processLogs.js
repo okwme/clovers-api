@@ -1,8 +1,10 @@
 
 
-module.exports = function (logType, log) {
+module.exports = function (log) {
   return new Promise((resolve, revert) => {
-    console.log(logType)
+    switch (log.name) {
+      
+    }
     console.log(log)
     resolve()
   })
