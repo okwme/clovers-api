@@ -75,8 +75,7 @@ var server = http.createServer((req, res) => {
   });
 
   // Send a simple message in HTML.
-  res.write('<h1>I’m a Node app!</h1>');
-  res.write('<p>And I’m <em>sooooo</em> secure.</p>');
+  res.write('✤');
   res.end();
 }).listen(port, host);
 
