@@ -207,7 +207,9 @@ function beginListen (key = 0) {
           break
         case('Registered'):
           io.emit('Registered', log);
+          console.log(log.data)
           if (log.data.newBoard) {
+            console.log('yes new data')
             let clover = {
               name: log.data.board,
               board: log.data.board,
@@ -219,7 +221,7 @@ function beginListen (key = 0) {
               modified: log.data.modified,
               findersFee: log.data.findersFee
             }
-            return r.db('clovers').table('clovers').insert(clover).run(connection, (err, result) => {
+            r.db('clovers').table('clovers').insert(clover).run(connection, (err, result) => {
               if (err) return reject(err)
               io.emit('newClover', clover);
             })
@@ -236,7 +238,6 @@ function beginListen (key = 0) {
               })
             })
           }
-
           r.db('clovers').table('users').get(log.data.newOwner).run(connection, (err, user) => {
             if (user) {
               user.clovers.push(log.data.board)
@@ -246,7 +247,7 @@ function beginListen (key = 0) {
               })
             } else {
               user = {
-                name: username.name,
+                name: log.data.newOwner,
                 address: log.data.newOwner,
                 clovers: [log.data.board]
               }

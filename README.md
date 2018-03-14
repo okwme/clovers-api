@@ -21,4 +21,12 @@ module.exports = {
 ## Run server
 
 `npm run serve`
-- On port 3000 for now
+- On port 3333 for now
+
+
+## Renew Cert
+for now:
+`ssh 104.131.181.241`
+`service nginx stop`
+`/opt/letsencrypt/certbot-auto renew`
+`service nginx start`
