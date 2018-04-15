@@ -214,7 +214,7 @@ function populateClovers () {
         let clovers = []
         let users = []
         result.forEach((log) => {
-          if (log.data.board === '0xfffffffffd5ffd7ff57fd77fffffffff') return
+          if (log.data.board === '0xfffffffffd5ffd7ff57fd77fffffffff') return false
           let clovername = clovernames.find((cn) => cn.board === log.data.board) || {name: log.data.board}
           if (log.data.newBoard) {
             clovers.push({
